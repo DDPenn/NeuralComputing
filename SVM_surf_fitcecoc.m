@@ -57,5 +57,9 @@ featureMatrix = encode(bag, validationSet);
 accuracy = sum(validationSet.Labels == pred)/size(validationSet.Labels,1);
 accuracy; % 29%...
 
+% Second approach, using imageTrainCatClassifier
+bag = bagOfFeatures(trainingSet); % create bag of features from trainingSet (already run for the first approach..)
+categoryClassifier = trainImageCategoryClassifier(trainingSet, bag);
+confMatrix = evaluate(categoryClassifier, validationSet); % 27% avg accuracy
 
 
