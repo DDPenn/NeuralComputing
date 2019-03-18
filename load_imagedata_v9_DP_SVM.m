@@ -164,35 +164,36 @@ SVM_hyperparameters = [SVM_hyperparameters, adjusted_perf];
 
 optimal_kernel = kernels{1};% ,'linear'{1}; %'gaussian'{2}, 'polynomial'{3}
 boxconst = [0.01;0.10;1;10;100];
+coding = {'onevsone','onevsall'};
 
 
-SVM_hyperparameters = zeros(numel(kernels),6);
+SVM_hyperparameters = zeros(numel(boxconst)*numel(coding),5);
 count = 0;
 
 for i = 1:numel(boxconst)
-    % fitcecoc requires an SVM template
-    tic;
-    t = templateSVM('KernelFunction', optimal_kernel, 'BoxConstraint', boxconst(i));
-    svm = fitcecoc(X_train_val, y_train_val, 'learners', t);
-    preds = svm.predict(X_train_val);
-    train_accuracy = mean(preds == y_train_val);
+    for j = 1:numel(coding)
+        % fitcecoc requires an SVM template
+        tic;
+        t = templateSVM('KernelFunction', optimal_kernel, 'BoxConstraint', boxconst(i));
+        svm = fitcecoc(X_train_val, y_train_val, 'learners', t, 'Coding', coding{j});
+        preds = svm.predict(X_train_val);
+        train_accuracy = mean(preds == y_train_val);
+        disp(i)
+        disp(j)
     
-    preds = svm.predict(X_test_val);
-    test_accuracy = mean(preds == y_test_val);
+        preds = svm.predict(X_test_val);
+        test_accuracy = mean(preds == y_test_val);
 
+        toc;
     
-    toc;
+        elapsed_time = toc;
+        count = count + 1;
     
-    elapsed_time = toc;
-    count = count + 1;
-    
-    
-    
-    SVM_hyperparameters(count,:) = [optimal_kernel count boxconst(i) ...
+        SVM_hyperparameters(count,:) = [count boxconst(i) coding{j} ...
             train_accuracy test_accuracy elapsed_time];
+    end
 end
-
-adjusted_perf = SVM_hyperparameters(:,3) ./ SVM_hyperparameters(:,4) *100;
+adjusted_perf = SVM_hyperparameters(:,4) ./ SVM_hyperparameters(:,5) *100;
 SVM_hyperparameters = [SVM_hyperparameters, adjusted_perf];
 
 
@@ -203,14 +204,16 @@ SVM_hyperparameters = [SVM_hyperparameters, adjusted_perf];
 
 
 
+% Train the classifier
 tic;
 t = templateSVM('KernelFunction', optimal_kernel, 'BoxConstraint', boxconst(i));
-svm = fitcecoc(X_train_val, y_train_val, 'learners', t);
-preds = svm.predict(X_train_val);
-train_accuracy = mean(preds == y_train_val);
+svm = fitcecoc(X_train, y_train, 'learners', t);
+preds = svm.predict(X_train);
+train_accuracy = mean(preds == y_train);
     
-preds = svm.predict(X_test_val);
-test_accuracy = mean(preds == y_test_val);
+%Testing on Final Test Set
+preds = svm.predict(X_test);
+test_accuracy = mean(preds == y_test);
     
 toc;
    
