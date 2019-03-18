@@ -50,63 +50,70 @@ imds_rand_Testsubset = shuffle(imds_rand_Testsubset);
 %while valid = "test_val")
 [X_train_val, X_test_val] = splitEachLabel(imds_rand_Trainsubset, 0.7, 'randomize');
 
-% cv_train_split = 0.70;
-
 % Confirm partition worked and check for class imbalance
 %countEachLabel(imds_rand_Trainsubset);
 %countEachLabel(imds_rand_Testsubset);
 
-%% Flatten array for raw pixel classification
-% CONFIRM THIS WORKS
-y_train_val = X_train_val.Labels;
-y_test_val = X_test_val.Labels;
-y_test = imds_rand_Testsubset.Labels;
+% Manually set the feature extractor from Raw, CNN, or Surf
+feature_extractor = 'Raw';
 
-X_train_val = reshape(cell2mat(X_train_val.readall),[],3072);
-X_test_val = reshape(cell2mat(X_test_val.readall),[],3072);
-X_test = reshape(cell2mat(imds_rand_Testsubset.readall),[],3072);
+if isequal(feature_extractor, 'Raw')
+    % Flatten array for raw pixel classification
+    % CONFIRM THIS WORKS
+    y_train_val = X_train_val.Labels;
+    y_test_val = X_test_val.Labels;
+    y_test = imds_rand_Testsubset.Labels;
 
-X_train_val = double(X_train_val);
-X_test_val = double(X_test_val);
-X_test = double(X_test);
+    X_train_val = reshape(cell2mat(X_train_val.readall),[],3072);
+    X_test_val = reshape(cell2mat(X_test_val.readall),[],3072);
+    X_test = reshape(cell2mat(imds_rand_Testsubset.readall),[],3072);
 
-%% CNN Feature Extractor
+    X_train_val = double(X_train_val);
+    X_test_val = double(X_test_val);
+    X_test = double(X_test);
 
-% Extract features from images using pretrained CNN
-net = vgg16();
+elseif isequal(feature_extractor, 'CNN')
+    % CNN Feature Extractor
+    % Extract features from images using pretrained CNN
+    net = vgg16();
 
-imageSize = net.Layers(1).InputSize;
-augmentedTrainVal = augmentedImageDatastore(imageSize, X_train_val);
-augmentedTestVal = augmentedImageDatastore(imageSize, X_test_val);
-augmentedTest = augmentedImageDatastore(imageSize, imds_rand_Testsubset);
+    imageSize = net.Layers(1).InputSize;
+    augmentedTrainVal = augmentedImageDatastore(imageSize, X_train_val);
+    augmentedTestVal = augmentedImageDatastore(imageSize, X_test_val);
+    augmentedTest = augmentedImageDatastore(imageSize, imds_rand_Testsubset);
 
-y_train_val = X_train_val.Labels;
-y_test_val = X_test_val.Labels;
-y_test = imds_rand_Testsubset.Labels;
+    y_train_val = X_train_val.Labels;
+    y_test_val = X_test_val.Labels;
+    y_test = imds_rand_Testsubset.Labels;
 
-% CHECK THAT fc6 IS CORRECT AND NOT POOL5 
-X_train_val = activations(net,augmentedTrainVal,'fc6','OutputAs','rows');
-X_test_val = activations(net,augmentedTestVal,'fc6','OutputAs','rows');
-X_test = activations(net,augmentedTest,'fc6','OutputAs','rows');
+    % CHECK THAT fc6 IS CORRECT AND NOT POOL5 
+    X_train_val = activations(net,augmentedTrainVal,'fc6','OutputAs','rows');
+    X_test_val = activations(net,augmentedTestVal,'fc6','OutputAs','rows');
+    X_test = activations(net,augmentedTest,'fc6','OutputAs','rows');
 
-X_train_val = double(X_train_val);
-X_test_val = double(X_test_val);
-X_test = double(X_test);
+    X_train_val = double(X_train_val);
+    X_test_val = double(X_test_val);
+    X_test = double(X_test);
 
-%% Surf Feature Extractor
-bag = bagOfFeatures(X_train_val); %BoF on train
+elseif isequal(feature_extractor, 'Surf')
+    % Surf Feature Extractor
+    bag = bagOfFeatures(X_train_val); %BoF on train
 
-y_train_val = X_train_val.Labels;
-y_test_val = X_test_val.Labels;
-y_test = imds_rand_Testsubset.Labels;
+    y_train_val = X_train_val.Labels;
+    y_test_val = X_test_val.Labels;
+    y_test = imds_rand_Testsubset.Labels;
 
-X_train_val = encode(bag, X_train_val);
-X_test_val = encode(bag, X_test_val);
-X_test = encode(bag, imds_rand_Testsubset);
+    X_train_val = encode(bag, X_train_val);
+    X_test_val = encode(bag, X_test_val);
+    X_test = encode(bag, imds_rand_Testsubset);
 
-X_train_val = double(X_train_val);
-X_test_val = double(X_test_val);
-X_test = double(X_test);
+    X_train_val = double(X_train_val);
+    X_test_val = double(X_test_val);
+    X_test = double(X_test);
+
+else
+    disp("Please select a valid feature extractor: Raw, CNN, or Surf")
+end 
 %% Fit SVM Model
 
 % Standardize the feature vectors
@@ -153,39 +160,80 @@ SVM_hyperparameters = [SVM_hyperparameters, adjusted_perf];
 
 
 %% SVM - gridsearch for model hyperparameters
-% Select optimal architecture
+% Select optimal SVM model
 
-kernels = {'linear'}% ,'gaussian'}; %'gaussian', 'polynomial'
+optimal_kernel = kernels{1};% ,'linear'{1}; %'gaussian'{2}, 'polynomial'{3}
+boxconst = [0.01;0.10;1;10;100];
+coding = {'onevsone','onevsall'};
 
 
-SVM_hyperparameters = zeros(numel(kernels),5);
+SVM_hyperparameters = zeros(numel(boxconst)*numel(coding),5);
 count = 0;
 
-for i = 1:numel(kernels)
-    % fitcecoc requires an SVM template
-    tic;
-    t = templateSVM('KernelFunction', kernels{i});
-    svm = fitcecoc(X_train_val, y_train_val, 'learners', t);
-    preds = svm.predict(X_train_val);
-    train_accuracy = mean(preds == y_train_val);
+for i = 1:numel(boxconst)
+    for j = 1:numel(coding)
+        % fitcecoc requires an SVM template
+        tic;
+        t = templateSVM('KernelFunction', optimal_kernel, 'BoxConstraint', boxconst(i));
+        svm = fitcecoc(X_train_val, y_train_val, 'learners', t, 'Coding', coding{j});
+        preds = svm.predict(X_train_val);
+        train_accuracy = mean(preds == y_train_val);
+        disp(i)
+        disp(j)
     
-    preds = svm.predict(X_test_val);
-    test_accuracy = mean(preds == y_test_val);
-    
-    toc;
-    
-    elapsed_time = toc;
-    count = count + 1;
-    
-    
-    
-    SVM_hyperparameters(count,:) = [i ...
-            train_accuracy test_accuracy elapsed_time];
-end
+        preds = svm.predict(X_test_val);
+        test_accuracy = mean(preds == y_test_val);
 
-adjusted_perf = SVM_hyperparameters(:,3) ./ SVM_hyperparameters(:,4) *100;
+        toc;
+    
+        elapsed_time = toc;
+        count = count + 1;
+    
+        SVM_hyperparameters(count,:) = [count boxconst(i) coding{j} ...
+            train_accuracy test_accuracy elapsed_time];
+    end
+end
+adjusted_perf = SVM_hyperparameters(:,4) ./ SVM_hyperparameters(:,5) *100;
 SVM_hyperparameters = [SVM_hyperparameters, adjusted_perf];
 
+
+
+%% SVM - Fit final model on whole train set and evaluate against test set 
+% Uses optimal kernel and hyperparameters
+% Update optimal parameter setting based on grid search
+
+
+
+% Train the classifier
+tic;
+t = templateSVM('KernelFunction', optimal_kernel, 'BoxConstraint', boxconst(i));
+svm = fitcecoc(X_train, y_train, 'learners', t);
+preds = svm.predict(X_train);
+train_accuracy = mean(preds == y_train);
+    
+%Testing on Final Test Set
+preds = svm.predict(X_test);
+test_accuracy = mean(preds == y_test);
+    
+toc;
+   
+SVM_elapsed_time = toc;
+
+% displaying results
+disp('SVM Final Model Performance:')
+disp(['Training Accuracy: ', num2str(train_accuracy)])
+disp(['Test Accuracy: ', num2str(test_accuracy)])
+disp(['Elapsed Time: ', num2str(SVM_elapsed_time)])
+disp(['Adjusted Accuracy: ', num2str(test_accuracy / SVM_elapsed_time *100)])
+
+
+%% Plot confusion matrices and evaluate performance
+
+SVM_cm = confusionmat(y_test, categorical(categories(preds)'));
+
+
+
+%%%%%%%%%OLD STUFF BELOW THIS POINT (talkin about SVM)
 
 
 %% try with resnet
