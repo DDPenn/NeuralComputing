@@ -129,7 +129,7 @@ avg_train_accuracy = mean(TrainPred == y_test_val);
 % MAKE SURE THAT THE TRAINING ACCURACY IS CORRECT
 kernels = {'linear','gaussian'}; %'gaussian', 'polynomial'
 
-SVM_hyperparameters = zeros(numel(kernels),5);
+SVM_hyperparameters = zeros(numel(kernels),4);
 count = 0;
 
 for i = 1:numel(kernels)
@@ -163,11 +163,12 @@ SVM_hyperparameters = [SVM_hyperparameters, adjusted_perf];
 % Select optimal SVM model
 
 optimal_kernel = kernels{1};% ,'linear'{1}; %'gaussian'{2}, 'polynomial'{3}
-boxconst = [0.01;0.10;1;10;100];
-coding = {'onevsone','onevsall'};
+boxconst = [0.01;0.10;0.3;0.5;1];
+coding =strcat({'onevsone','onevsall'});
 
-
-SVM_hyperparameters = zeros(numel(boxconst)*numel(coding),5);
+%solution suggested
+SVM_hyperparameters_table = cell2table(cell(0,6)); %initialize an empy tab
+% SVM_hyperparameters = zeros(numel(boxconst)*numel(coding),6);
 count = 0;
 
 for i = 1:numel(boxconst)
@@ -178,8 +179,8 @@ for i = 1:numel(boxconst)
         svm = fitcecoc(X_train_val, y_train_val, 'learners', t, 'Coding', coding{j});
         preds = svm.predict(X_train_val);
         train_accuracy = mean(preds == y_train_val);
-        disp(i)
-        disp(j)
+        disp(i) %can comment if it all works
+        disp(j) %can comment if it all works
     
         preds = svm.predict(X_test_val);
         test_accuracy = mean(preds == y_test_val);
@@ -188,20 +189,20 @@ for i = 1:numel(boxconst)
     
         elapsed_time = toc;
         count = count + 1;
-    
-        SVM_hyperparameters(count,:) = [count boxconst(i) coding{j} ...
-            train_accuracy test_accuracy elapsed_time];
+        a = horzcat(count,boxconst(i),train_accuracy ,test_accuracy ,elapsed_time,cellstr(coding(j)));
+        SVM_hyperparameters_table=[SVM_hyperparameters_table;a];
+%         SVM_hyperparameters(count,:) = [count boxconst(i) cellstr(coding(j)) ...
+%             train_accuracy test_accuracy elapsed_time];
     end
 end
-adjusted_perf = SVM_hyperparameters(:,4) ./ SVM_hyperparameters(:,5) *100;
-SVM_hyperparameters = [SVM_hyperparameters, adjusted_perf];
+adjusted_perf = SVM_hyperparameters_table(:,4) ./ SVM_hyperparameters_table(:,5) *100; %but having a table, this point doesnt work anymore..
+SVM_hyperparameters_table = [SVM_hyperparameters_table, adjusted_perf];
 
 
 
 %% SVM - Fit final model on whole train set and evaluate against test set 
 % Uses optimal kernel and hyperparameters
 % Update optimal parameter setting based on grid search
-
 
 
 % Train the classifier
