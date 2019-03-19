@@ -41,8 +41,8 @@ imds_test = imageDatastore(fullfile(rootFolder, categories), ...
 
 % Set subset of total training and test data
 
-train_samples = 5000;
-test_samples = 1000;
+train_samples = 2000;
+test_samples = 500;
 
 imds_rand_Trainsubset = splitEachLabel(imds_train,train_samples/10,'randomized');
 imds_rand_Testsubset = splitEachLabel(imds_test,test_samples/10,'randomized');
@@ -311,7 +311,7 @@ plotconfusion(categorical(categories(MLP_preds)'), y_test,'MLP Confusion Matrix'
 
 %% Fit SVM Model
 
-kernels = {'linear','gaussian'}; %'gaussian', 'polynomial'
+kernels = {'linear','gaussian','polynomial'}; %'gaussian', 'polynomial'
 
 SVM_hyperparameters = zeros(numel(kernels),4);
 count = 0;
@@ -382,14 +382,15 @@ end
 adjusted_perf_SVM = SVM_hyperparameters_table{:,4}./SVM_hyperparameters_table{:,5}*100; %IT WORKS! CHECK IT OUT, ANDREW
 SVM_hyperparameters_table = [SVM_hyperparameters_table, table(adjusted_perf_SVM)];
 
-
+disp('SVM Hyperparameter Performance - 2nd Level:')
+disp(SVM_hyperparameters_table)
 
 %% SVM - Fit final model on whole train set and evaluate against test set 
 % Uses optimal kernel and hyperparameters
 % Update optimal parameter setting based on grid search
 optimal_kernel=kernels{1};
-optimal_boxconst = 1;
-optimal_coding = 'onevsone';
+optimal_boxconst = 1; %for raw data is 0.01, else is 1
+optimal_coding = 'onevsone'; %for raw data is onevsall, whereas is onevsone
 
 % Train the classifier
 tic;
