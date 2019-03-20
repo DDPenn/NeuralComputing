@@ -59,9 +59,10 @@ imds_rand_Testsubset = shuffle(imds_rand_Testsubset);
 %countEachLabel(imds_rand_Trainsubset);
 %countEachLabel(imds_rand_Testsubset);
 
-% Manually set the feature extractor from Raw, CNN, or Surf
-feature_extractor = 'Surf';
+%% Manually set the feature extractor from Raw, CNN, or Surf
+feature_extractor = input('Choose the feature extractor ');%Insert a string value, i.e:'Surf';
 
+%%
 if isequal(feature_extractor, 'Raw')
     % Flatten array for raw pixel classification
     
@@ -389,7 +390,7 @@ disp(SVM_hyperparameters_table)
 % Uses optimal kernel and hyperparameters
 % Update optimal parameter setting based on grid search
 optimal_kernel=kernels{1};
-optimal_boxconst = 1; %for raw data is 0.01, else is 1
+optimal_boxconst = 0.1; %for raw data is 0.01, else is 1
 optimal_coding = 'onevsone'; %for raw data is onevsall, whereas is onevsone
 
 % Train the classifier
