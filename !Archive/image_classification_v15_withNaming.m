@@ -450,4 +450,4 @@ plotconfusion(SVM_preds, y_test, 'SVM Confusion Matrix');
 
 %%%%%%%%%%%% Surf & CNN Visualization %%%%%
 I = deepDreamImage(net,'fc6',1:3,'PyramidLevels',3);
-imshow(I
+imshow(I)
