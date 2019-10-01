@@ -35,6 +35,25 @@ rootFolder = 'cifar10Test';
 imds_test = imageDatastore(fullfile(rootFolder, categories), ...
     'LabelSource', 'foldernames');
 
+%% Plot/Count each label (training set and test set)
+T = countEachLabel(imds_train);
+TT = countEachLabel(imds_test);
+
+figure
+bar(T.Label, T.Count)
+title('Images per Label - Training Dataset')
+xlabel('Labels')
+ylabel('Frequency of occurrence')
+ylim([0,6000])
+
+
+figure
+bar(TT.Label, TT.Count)
+title('Images per Label - Test Dataset')
+xlabel('Labels')
+ylabel('Frequency of occurrence')
+ylim([0,1500])
+
 % Shuffling and Splitted/Select a subset of training data
 % splitEachLabel(imgDataStore, number of img for each category,
 % 'randomized')
